@@ -1,0 +1,26 @@
+{
+  "model_or_algorithm": {
+    "status": "missing",
+    "claims": []
+  },
+  "dataset": {
+    "status": "missing",
+    "claims": []
+  },
+  "methodology": {
+    "status": "missing",
+    "claims": []
+  },
+  "hyperparameters_and_experimental_configuration": {
+    "status": "missing",
+    "claims": []
+  },
+  "evaluation_metrics": {
+    "status": "missing",
+    "claims": []
+  },
+  "published_or_reported_results": {
+    "status": "missing",
+    "claims": []
+  }
+}
