@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 import unittest
 from unittest.mock import patch
@@ -734,6 +734,26 @@ class OllamaExtractionTests(unittest.TestCase):
             [[1, 2], [3, 4], [5]],
         )
 
+    def test_empty_evidence_ids_omits_empty_enum_array(self) -> None:
+        """Verify that when a page has no evidence snippets, enum is omitted from items."""
+        schema = llm_extractor._request_schema(
+            allowed_page_numbers={1},
+            source_pages={1: ""},
+        )
+        claim_properties = schema["$defs"]["Claim"]["properties"]
+        evidence_items = claim_properties["evidence_ids"]["items"]
+        self.assertEqual(evidence_items.get("type"), "string")
+        self.assertNotIn("enum", evidence_items)
+
+    def test_empty_pages_returns_missing_details_without_calling_ollama(self) -> None:
+        """Verify that empty page list or blank pages return missing fields without Ollama call."""
+        res = llm_extractor.extract_research_details([])
+        self.assertEqual(res.methodology.status, "missing")
+
+        res_blank = llm_extractor.extract_research_details([{"page_number": 1, "text": "   "}])
+        self.assertEqual(res_blank.dataset.status, "missing")
+
 
 if __name__ == "__main__":
     unittest.main()
+

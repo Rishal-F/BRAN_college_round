@@ -86,7 +86,7 @@ export default function PaperUpload({
     }
   };
 
-  const handleAnalyzePaper = async () => {
+  const handleAnalyzePaper = async (isDemo = false) => {
     if (!uploadedFile) {
       setUploadError('Please select or drop a PDF research paper first.');
       return;
@@ -96,22 +96,16 @@ export default function PaperUpload({
     setUploadError(null);
 
     try {
-      const response = await uploadPaper(uploadedFile);
+      const response = await uploadPaper(uploadedFile, isDemo);
       setExtractionResponse(response);
 
-      if (response.status === 'integration_pending') {
-        addToast({
-          type: 'warning',
-          title: 'PDF Received by Backend',
-          message: response.message || 'Extractor integration pending with Member 1.',
-        });
-      } else {
-        addToast({
-          type: 'success',
-          title: 'Extraction Received',
-          message: 'Research paper successfully processed.',
-        });
-      }
+      addToast({
+        type: 'success',
+        title: isDemo ? 'Demo Fixture Loaded' : 'Paper Extraction Complete',
+        message: isDemo
+          ? 'Loaded validated research extraction fixture.'
+          : 'Ollama extraction completed successfully.',
+      });
 
       if (onProceedToExtraction) {
         onProceedToExtraction();
@@ -128,6 +122,7 @@ export default function PaperUpload({
       setIsUploading(false);
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -294,8 +289,20 @@ export default function PaperUpload({
             </button>
           )}
 
+          {uploadedFile && (
+            <button
+              type="button"
+              onClick={() => handleAnalyzePaper(true)}
+              disabled={isUploading}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-full text-xs font-mono font-medium border border-steel/30 bg-surface-paleBlue text-deepBlue hover:bg-surface-paleBlue/80 transition-colors shadow-xs"
+              title="Quickly test extraction using validated research fixture"
+            >
+              Instant Demo Fixture
+            </button>
+          )}
+
           <button
-            onClick={handleAnalyzePaper}
+            onClick={() => handleAnalyzePaper(false)}
             disabled={!uploadedFile || isUploading}
             className={`w-full sm:w-auto px-6 py-3 rounded-full font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-cta-glow ${
               !uploadedFile || isUploading
@@ -306,7 +313,7 @@ export default function PaperUpload({
             {isUploading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Uploading to /extract...</span>
+                <span>Running Ollama Extractor...</span>
               </>
             ) : (
               <>
@@ -316,6 +323,7 @@ export default function PaperUpload({
               </>
             )}
           </button>
+
         </div>
       </div>
 

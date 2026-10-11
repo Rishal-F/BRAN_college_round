@@ -28,7 +28,11 @@ export default function ExtractedInspector({
   const hasRealExtractedFields =
     extractionResponse &&
     extractionResponse.status !== 'integration_pending' &&
-    (extractionResponse.title || extractionResponse.methodology);
+    (extractionResponse.title ||
+      extractionResponse.methodology ||
+      extractionResponse.model_or_algorithm ||
+      extractionResponse.confirmed_details);
+
 
   const data = hasRealExtractedFields
     ? extractionResponse

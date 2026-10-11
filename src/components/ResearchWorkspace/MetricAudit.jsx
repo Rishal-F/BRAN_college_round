@@ -15,6 +15,8 @@ import MetricGauge from '../ui/MetricGauge';
 export default function MetricAudit({
   auditResult,
   setAuditResult,
+  experimentResult,
+  extractionResponse,
   onProceedToReport,
   addToast,
 }) {
@@ -22,6 +24,22 @@ export default function MetricAudit({
   const [measuredAccuracy, setMeasuredAccuracy] = useState('0.89');
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditError, setAuditError] = useState(null);
+
+  React.useEffect(() => {
+    if (experimentResult?.measured_accuracy !== undefined) {
+      setMeasuredAccuracy(String(Number(experimentResult.measured_accuracy.toFixed(4))));
+    }
+  }, [experimentResult]);
+
+  React.useEffect(() => {
+    if (extractionResponse?.reported_metrics?.length > 0) {
+      const metric = extractionResponse.reported_metrics[0];
+      if (metric?.reported_value !== undefined) {
+        setReportedAccuracy(String(metric.reported_value));
+      }
+    }
+  }, [extractionResponse]);
+
 
   const presets = [
     {

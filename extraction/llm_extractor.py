@@ -7,6 +7,7 @@ import copy
 import json
 import os
 import re
+import socket
 import sys
 import time
 import unicodedata
@@ -18,19 +19,21 @@ from urllib.request import Request, urlopen
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 try:
-    from .pdf_reader import PDFPage, extract_pdf_pages
+    from .pdf_reader import PDFPage, ScannedPDFError, extract_pdf_pages
 except ImportError:  # pragma: no cover - supports direct script execution.
-    from pdf_reader import PDFPage, extract_pdf_pages
+    from pdf_reader import PDFPage, ScannedPDFError, extract_pdf_pages
 
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 OLLAMA_MODEL = "qwen2.5:3b"
 DEFAULT_CHUNK_SIZE = 2
-DEFAULT_REQUEST_TIMEOUT_SECONDS = 180
+DEFAULT_REQUEST_TIMEOUT_SECONDS = 300
 DEFAULT_MAX_OUTPUT_TOKENS = 2048
 OLLAMA_TIMEOUT_ENV_VAR = "OLLAMA_TIMEOUT_SECONDS"
 OLLAMA_MAX_OUTPUT_TOKENS_ENV_VAR = "OLLAMA_MAX_OUTPUT_TOKENS"
+OLLAMA_CHUNK_SIZE_ENV_VAR = "OLLAMA_CHUNK_SIZE"
 DEMO_FIXTURE_PATH = Path(__file__).with_name("demo_research_details.json")
+
 
 
 class Claim(BaseModel):
@@ -223,17 +226,28 @@ def _request_schema(
     schema = copy.deepcopy(_RESEARCH_DETAILS_SCHEMA)
     claim_schema = schema["$defs"]["Claim"]
     claim_properties = claim_schema["properties"]
-    claim_properties["page_numbers"]["items"] = {
-        "type": "integer",
-        "enum": sorted(allowed_page_numbers),
-    }
+    if allowed_page_numbers:
+        claim_properties["page_numbers"]["items"] = {
+            "type": "integer",
+            "enum": sorted(allowed_page_numbers),
+        }
+    else:
+        claim_properties["page_numbers"]["items"] = {
+            "type": "integer",
+        }
     if source_pages is not None:
         evidence_ids = sorted(_build_evidence_snippets(source_pages))
-        claim_properties["evidence_ids"]["items"] = {
-            "type": "string",
-            "enum": evidence_ids,
-        }
+        if evidence_ids:
+            claim_properties["evidence_ids"]["items"] = {
+                "type": "string",
+                "enum": evidence_ids,
+            }
+        else:
+            claim_properties["evidence_ids"]["items"] = {
+                "type": "string",
+            }
     return schema
+
 
 
 def _numeric_tokens(text: str) -> set[str]:
@@ -461,7 +475,10 @@ def _call_ollama(
                 "model": OLLAMA_MODEL,
                 "stream": False,
                 "format": request_schema,
-                "options": {"num_predict": _max_output_tokens()},
+                "options": {
+                    "num_predict": _max_output_tokens(),
+                    "temperature": 0.1,
+                },
                 "messages": messages,
             }
         ).encode("utf-8")
@@ -476,14 +493,29 @@ def _call_ollama(
             with urlopen(request, timeout=_request_timeout_seconds()) as response:
                 response_data = json.loads(response.read().decode("utf-8"))
         except HTTPError as error:
+            error_body = ""
+            try:
+                error_body = error.read().decode("utf-8")
+            except Exception:
+                pass
             if error.code == 404:
                 raise ExtractionError(
                     f"Ollama returned HTTP 404. Ensure model {OLLAMA_MODEL!r} is available."
+                ) from error
+            if error_body:
+                raise ExtractionError(
+                    f"Ollama returned HTTP {error.code}: {error.reason} - {error_body}"
                 ) from error
             raise ExtractionError(
                 f"Ollama returned HTTP {error.code}: {error.reason}"
             ) from error
         except URLError as error:
+            if isinstance(getattr(error, "reason", None), (TimeoutError, socket.timeout)) or "timed out" in str(getattr(error, "reason", "")).lower():
+                raise ExtractionError(
+                    f"The Ollama request timed out while processing page chunk "
+                    f"[{chunk_label}]. Retry the command, or set "
+                    f"{OLLAMA_TIMEOUT_ENV_VAR} to a larger positive number of seconds."
+                ) from error
             raise ExtractionError(
                 "Could not connect to Ollama at http://localhost:11434. "
                 "Start Ollama and try again."
@@ -496,6 +528,7 @@ def _call_ollama(
             ) from error
         except json.JSONDecodeError as error:
             raise ExtractionError("Ollama returned a non-JSON HTTP response.") from error
+
 
         if not isinstance(response_data, dict):
             raise ExtractionError("Ollama returned a JSON response object was expected.")
@@ -688,23 +721,39 @@ def _combine(extractions: list[ResearchDetails]) -> ResearchDetails:
     return ResearchDetails.model_validate(combined)
 
 
+def _configured_chunk_size() -> int:
+    val = os.environ.get(OLLAMA_CHUNK_SIZE_ENV_VAR)
+    if val:
+        try:
+            return max(1, int(val))
+        except ValueError:
+            pass
+    return DEFAULT_CHUNK_SIZE
+
+
 def extract_research_details(pages: list[PDFPage]) -> ResearchDetails:
     """Extract evidence-backed research details from PDF page records.
 
-    Long papers are sent to Ollama in two-page chunks. The returned Pydantic
+    Long papers are sent to Ollama in page chunks. The returned Pydantic
     model contains only claims and page references returned for those chunks.
     """
-    if not pages:
+    if not pages or all(not page.get("text", "").strip() for page in pages):
         return ResearchDetails(**{name: _empty_field() for name in _FIELD_NAMES})
+
+    chunk_size = _configured_chunk_size()
+    meaningful_pages = [page for page in pages if page.get("text", "").strip()]
+    pages_to_process = meaningful_pages if meaningful_pages else pages
+
     extractions = [
         _call_ollama(
             _build_prompt(chunk),
             {page["page_number"] for page in chunk},
             {page["page_number"]: page["text"] for page in chunk},
         )
-        for chunk in _chunk_pages(pages, DEFAULT_CHUNK_SIZE)
+        for chunk in _chunk_pages(pages_to_process, chunk_size)
     ]
     return _combine(extractions)
+
 
 
 def _build_parser() -> argparse.ArgumentParser:

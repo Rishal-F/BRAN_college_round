@@ -24,13 +24,16 @@ export default function ResearchWorkspace({
   setAuditResult,
   addToast,
 }) {
+  const [experimentResult, setExperimentResult] = React.useState(null);
+
   const tabs = [
     { id: 'upload', label: '1. Paper Intake', icon: FileUp, badge: uploadedFile ? 'Uploaded' : null },
     { id: 'inspector', label: '2. Evidence Inspector', icon: FileSearch, badge: extractionResponse ? 'Parsed' : null },
-    { id: 'config', label: '3. Experiment DAG', icon: Sliders, badge: '501 Staged' },
+    { id: 'config', label: '3. Experiment DAG', icon: Sliders, badge: experimentResult ? 'Measured' : 'Runner Live' },
     { id: 'audit', label: '4. Metric Audit', icon: Scale, badge: auditResult ? 'Audited' : 'Active' },
     { id: 'report', label: '5. Findings Report', icon: FileText, badge: auditResult ? 'Ready' : null },
   ];
+
 
   return (
     <section id="workspace" className="py-20 px-4 sm:px-6 lg:px-8 relative border-t border-border-line bg-canvas-light">
@@ -115,6 +118,8 @@ export default function ResearchWorkspace({
 
           {activeStage === 'config' && (
             <ExperimentConfig
+              experimentResult={experimentResult}
+              setExperimentResult={setExperimentResult}
               onProceedToAudit={() => setActiveStage('audit')}
               addToast={addToast}
             />
@@ -124,10 +129,13 @@ export default function ResearchWorkspace({
             <MetricAudit
               auditResult={auditResult}
               setAuditResult={setAuditResult}
+              experimentResult={experimentResult}
+              extractionResponse={extractionResponse}
               onProceedToReport={() => setActiveStage('report')}
               addToast={addToast}
             />
           )}
+
 
           {activeStage === 'report' && (
             <ResultsReport

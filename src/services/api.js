@@ -52,8 +52,9 @@ export async function checkBackend() {
  * Upload research paper PDF for extraction
  * POST /extract
  * @param {File} file - PDF file to extract
+ * @param {boolean} demo - If true, requests demo extraction fixture
  */
-export async function uploadPaper(file) {
+export async function uploadPaper(file, demo = false) {
   if (!file) {
     throw new Error('Please select a PDF file.');
   }
@@ -65,8 +66,8 @@ export async function uploadPaper(file) {
   const formData = new FormData();
   formData.append('file', file);
 
-  // Note: Do not set Content-Type header manually; browser automatically sets multipart/form-data with boundary.
-  const response = await fetch(`${API_BASE_URL}/extract`, {
+  const url = demo ? `${API_BASE_URL}/extract?demo=true` : `${API_BASE_URL}/extract`;
+  const response = await fetch(url, {
     method: 'POST',
     body: formData,
   });
@@ -110,29 +111,19 @@ export async function auditResults(reportedAccuracy, measuredAccuracy) {
 /**
  * Execute experiment runner
  * POST /run
- * Note: Backend currently returns HTTP 501 (Member 2 runner integration pending).
+ * Connected to Member 2's execute_experiment engine with MLflow tracking.
  */
 export async function runExperiment(config = {}) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/run`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(config),
-    });
-    return await handleResponse(response);
-  } catch (err) {
-    if (err.status === 501) {
-      return {
-        status: 'not_implemented',
-        available: false,
-        message: 'Member 2 experiment runner not connected yet (HTTP 501).'
-      };
-    }
-    throw err;
-  }
+  const response = await fetch(`${API_BASE_URL}/run`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify(config),
+  });
+  return await handleResponse(response);
 }
+
 
 export { API_BASE_URL };

@@ -12,6 +12,10 @@ from typing import TypedDict
 import fitz
 
 
+class ScannedPDFError(ValueError):
+    """Raised when a PDF contains no extractable text (e.g., scanned or image-only)."""
+
+
 class PDFPage(TypedDict):
     """Text extracted from one PDF page."""
 
@@ -19,7 +23,10 @@ class PDFPage(TypedDict):
     text: str
 
 
-def extract_pdf_pages(pdf_path: str | Path) -> list[PDFPage]:
+def extract_pdf_pages(
+    pdf_path: str | Path,
+    allow_empty: bool = False,
+) -> list[PDFPage]:
     """Extract text from each page of a PDF.
 
     Pages without extractable text are included with an empty ``text`` value
@@ -28,6 +35,7 @@ def extract_pdf_pages(pdf_path: str | Path) -> list[PDFPage]:
     Raises:
         FileNotFoundError: If ``pdf_path`` does not exist or is not a file.
         ValueError: If the file is not a valid or readable PDF.
+        ScannedPDFError: If the PDF contains no extractable text (scanned/image-only).
     """
     path = Path(pdf_path)
     if not path.is_file():
@@ -54,7 +62,15 @@ def extract_pdf_pages(pdf_path: str | Path) -> list[PDFPage]:
     finally:
         document.close()
 
+    if (not pages or all(not page["text"].strip() for page in pages)) and not allow_empty:
+        raise ScannedPDFError(
+            f"The PDF contains no extractable text: {path}. "
+            "It appears to be a scanned or image-only document. "
+            "CrisisGrid requires text-selectable research PDFs."
+        )
+
     return pages
+
 
 
 def _build_parser() -> argparse.ArgumentParser:
