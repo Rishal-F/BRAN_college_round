@@ -61,12 +61,27 @@ def load_dataset():
 
 
 def analyze_numeric(df, feature):
-    yes = pd.to_numeric(
-        df.loc[df[OUTCOME] == "Yes", feature], errors="coerce"
-    ).dropna()
-    no = pd.to_numeric(
-        df.loc[df[OUTCOME] == "No", feature], errors="coerce"
-    ).dropna()
+   
+    # The original paper normalizes numeric counts by paper length,
+    # except publication/attempt year, page count and author count.
+    values = pd.to_numeric(df[feature], errors="coerce")
+
+    exempt_features = {
+        "Year",
+        "Year Attempted",
+        "Pages",
+        "Number of Authors",
+    }
+
+    if feature not in exempt_features:
+        pages = pd.to_numeric(
+            df["Pages"], errors="coerce"
+        ).replace(0, np.nan)
+        values = values / pages
+
+    yes = values[df[OUTCOME] == "Yes"].dropna()
+    no = values[df[OUTCOME] == "No"].dropna()
+
 
     if len(yes) == 0 or len(no) == 0:
         return None
