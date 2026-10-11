@@ -1,1 +1,67 @@
+# CrisisGrid — ML Research Reproducibility Engine
 
+> 12-Hour College Round Hackathon Prototype
+
+CrisisGrid investigates whether machine-learning results reported in research papers can be independently reproduced through structured evidence extraction, deterministic experiment configuration, and automated metric discrepancy auditing.
+
+---
+
+## ⚡ Team Responsibilities
+
+- **Member 1**: PDF extraction & research-paper information parsing (`POST /extract`).
+- **Member 2**: Experiment execution runner & MLflow telemetry (`POST /run`).
+- **Member 3 (This Work)**: Creative frontend, motion design, interactive lab workspace, and FastAPI integration.
+- **Member 4**: FastAPI backend structure & metric discrepancy verification (`POST /audit`, `GET /health`).
+
+---
+
+## 🚀 Quick Start
+
+### 1. Start the FastAPI Backend (Port 8000)
+
+```bash
+# In the repository root
+python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
+```
+
+- API Base: `http://127.0.0.1:8000`
+- Interactive Swagger Docs: `http://127.0.0.1:8000/docs`
+
+### 2. Start the Frontend (Port 5173)
+
+```bash
+# Install frontend dependencies
+npm install
+
+# Start Vite development server
+npm run dev
+```
+
+- Frontend URL: `http://localhost:5173`
+
+---
+
+## 📡 Backend API Endpoints & Integration Status
+
+| Method | Endpoint | Status | Description |
+|---|---|---|---|
+| `GET` | `/health` | ✅ Operational | Backend heartbeat check. Header status indicator pings this endpoint. |
+| `POST` | `/audit` | ✅ Operational | Discrepancy calculation between reported accuracy and measured accuracy. |
+| `POST` | `/extract` | ⏳ Staged (`integration_pending`) | Accepts multipart PDF upload; awaiting Member 1 extractor connection. |
+| `POST` | `/run` | ⏳ Staged (`HTTP 501`) | Experiment execution pipeline; awaiting Member 2 runner connection. |
+
+---
+
+## 🎨 Frontend Architecture & Motion Design
+
+Built using **React + Vite + Tailwind CSS + Framer Motion**:
+- **Section A (Hero)**: Staggered typography, interactive lifecycle DAG map, and instant audit jump.
+- **Section B (The Reproducibility Problem)**: 5-step interactive narrative explaining replication breakdown.
+- **Section C (Workflow Pipeline)**: 5-stage interactive pipeline reflecting real application state.
+- **Section D & E (Research Workspace)**:
+  - **Paper Intake**: Drag & drop PDF upload with client validation and `POST /extract` integration.
+  - **Evidence Inspector**: Structural analysis of hyperparameters, confirmed details, ambiguities, and source citations.
+  - **Experiment DAG**: Execution pipeline review (Dataset → Preprocessing → Model → Evaluation → MLflow) with honest 501 handling.
+  - **Metric Audit Center**: Dual slider/input accuracy controls [0.0–1.0], live comparison gauge, and authoritative `POST /audit` execution.
+  - **Findings Report**: Consolidated report with tolerance outcomes, markdown summary export, and reproducibility guardrails.
+- **Section F (Call to Action)**: Direct link to launch research audits.
