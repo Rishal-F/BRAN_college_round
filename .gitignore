@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+mlruns/
+.env
+results/
+mlflow.db
+mlflow.db-shm
+mlflow.db-wal
