@@ -4,3 +4,7 @@ scipy
 matplotlib
 mlflow
 pytest
+python-multipart
+fastapi
+uvicorn
+scikit-learn

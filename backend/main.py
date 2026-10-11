@@ -3,7 +3,12 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from audit import compare_results
+try:
+    from backend.audit import compare_results
+    from backend.runner import execute_experiment
+except ModuleNotFoundError:
+    from audit import compare_results
+    from runner import execute_experiment
 
 app = FastAPI(title="CrisisGrid API")
 
@@ -47,12 +52,25 @@ async def extract(file: UploadFile = File(...)):
     }
 
 
-@app.post("/run")
-def run_experiment():
-    raise HTTPException(
-        status_code=501,
-        detail="Member 2 experiment runner not connected yet."
+class ExperimentRequest(BaseModel):
+    dataset: str = "iris"
+    model: str = "random_forest"
+    hyperparameters: dict = Field(
+        default_factory=lambda: {
+            "n_estimators": 100,
+            "max_depth": 5
+        }
     )
+    test_size: float = Field(default=0.2, gt=0, lt=1)
+    random_seed: int = 42
+
+
+@app.post("/run")
+def run_experiment(request: ExperimentRequest):
+    try:
+        return execute_experiment(request.model_dump())
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 class AuditRequest(BaseModel):
