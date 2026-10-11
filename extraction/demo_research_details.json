@@ -20,7 +20,19 @@
     "claims": []
   },
   "published_or_reported_results": {
-    "status": "missing",
-    "claims": []
+    "status": "reported",
+    "claims": [
+      {
+        "value": "Papers with fewer equations and more tables tend to be more reproducible.",
+        "page_numbers": [
+          9
+        ],
+        "evidence_ids": [
+          "e038"
+        ],
+        "evidence": "s not suf\ufb01cient. Our study indicates papers with fewer equations and\nmore tables tend to be more reproducible, and that there is a potential latent issue in reproduction\nwhen cluster computing becomes a requirement.\nAcknowledgements\nI would",
+        "status": "reported"
+      }
+    ]
   }
 }

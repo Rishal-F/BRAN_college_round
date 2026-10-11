@@ -65,12 +65,20 @@ class OllamaExtractionTests(unittest.TestCase):
 
         self.assertEqual(
             [getattr(details, name).status for name in llm_extractor._FIELD_NAMES],
-            ["missing"] * 6,
+            ["missing", "missing", "missing", "missing", "missing", "reported"],
         )
         self.assertEqual(
-            [getattr(details, name).claims for name in llm_extractor._FIELD_NAMES],
-            [[]] * 6,
+            [
+                len(getattr(details, name).claims)
+                for name in llm_extractor._FIELD_NAMES
+            ],
+            [0, 0, 0, 0, 0, 1],
         )
+        claim = details.published_or_reported_results.claims[0]
+        self.assertEqual(claim.page_numbers, [9])
+        self.assertEqual(claim.evidence_ids, ["e038"])
+        self.assertIn("fewer equations", claim.evidence)
+        self.assertIn("more tables", claim.evidence)
 
     def test_rejects_reported_field_with_empty_claims(self) -> None:
         result = json.loads(_valid_content())

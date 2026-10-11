@@ -736,7 +736,13 @@ def main() -> int:
                 "DEMO MODE: using local illustrative fixture; no live AI extraction.",
                 file=sys.stderr,
             )
-            print(_load_demo_details().model_dump_json(indent=2))
+            print(
+                json.dumps(
+                    _load_demo_details().model_dump(mode="json"),
+                    ensure_ascii=True,
+                    indent=2,
+                )
+            )
             return 0
         if args.pdf_path is None:
             raise ExtractionError("A PDF path is required unless --demo is used.")
